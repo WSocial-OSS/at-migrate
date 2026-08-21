@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import SetupForm, { type SetupValues } from './SetupForm'
+import { type DirectoryEntry } from './DirectionPicker'
 import RunProgress, { Inventory, RunLog } from './RunProgress'
 import BlockerForm from './BlockerForm'
 import Outcome from './Outcome'
@@ -9,29 +10,39 @@ import type { Direction, PdsHost, RunView } from '@/lib/migration/types'
 
 const FALLBACK: PdsHost[] = [{ label: 'Bluesky', host: 'bsky.social' }]
 
+type HostsResponse = {
+  featured?: PdsHost[]
+  directory?: DirectoryEntry[]
+  totalHosts?: number
+  relayError?: string
+}
+
 export default function Wizard() {
-  const [hosts, setHosts] = useState<PdsHost[] | null>(null)
+  const [featured, setFeatured] = useState<PdsHost[] | null>(null)
+  const [dir, setDir] = useState<{ directory: DirectoryEntry[]; total: number }>({ directory: [], total: 0 })
   const [direction, setDirection] = useState<Direction | null>(null)
   const [run, setRun] = useState<RunView | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | undefined>()
   const streamRef = useRef<EventSource | null>(null)
 
-  // Probe the offered servers once; the picker only shows hosts that answered.
+  // Featured hosts are probed server side on load; the rest of the network's
+  // ~1,800 servers stay in the searchable directory and are verified on pick.
   useEffect(() => {
     let live = true
     fetch('/api/hosts')
       .then((r) => r.json())
-      .then((data: { hosts: PdsHost[] }) => {
+      .then((data: HostsResponse) => {
         if (!live) return
-        const list = data.hosts?.length ? data.hosts : FALLBACK
-        setHosts(list)
-        setDirection((prev) => prev ?? defaultDirection(list))
+        const list = data.featured?.length ? data.featured : FALLBACK
+        setFeatured(list)
+        setDir({ directory: data.directory ?? [], total: data.totalHosts ?? list.length })
+        setDirection((prev) => prev ?? defaultDirection(list, data.directory ?? []))
       })
       .catch(() => {
         if (!live) return
-        setHosts(FALLBACK)
-        setDirection((prev) => prev ?? defaultDirection(FALLBACK))
+        setFeatured(FALLBACK)
+        setDirection((prev) => prev ?? defaultDirection(FALLBACK, []))
       })
     return () => {
       live = false
@@ -115,7 +126,7 @@ export default function Wizard() {
     startOver()
   }, [run, startOver])
 
-  if (!hosts || !direction) {
+  if (!featured || !direction) {
     return (
       <div className="card">
         <p className="dim" style={{ margin: 0 }}>Checking which servers are available…</p>
@@ -126,7 +137,9 @@ export default function Wizard() {
   if (!run) {
     return (
       <SetupForm
-        hosts={hosts}
+        featured={featured}
+        directory={dir.directory}
+        totalHosts={dir.total}
         direction={direction}
         onDirectionChange={setDirection}
         onSubmit={start}
@@ -201,12 +214,16 @@ export default function Wizard() {
   )
 }
 
-function defaultDirection(hosts: PdsHost[]): Direction {
-  const home = hosts.find((h) => h.home)
-  const other = hosts.find((h) => h !== home && h.reachable !== false) ?? hosts.find((h) => h !== home)
-  // Default to arriving at this deployment's own server; the swap button covers leaving.
-  if (home && other) return { from: other, to: home }
-  return { from: hosts[0], to: home ?? hosts[1] ?? hosts[0] }
+function defaultDirection(featured: PdsHost[], directory: DirectoryEntry[]): Direction {
+  const home = featured.find((h) => h.home)
+  const other =
+    featured.find((h) => h !== home && h.reachable !== false) ??
+    featured.find((h) => h !== home) ??
+    directory.find((e) => e.host !== home?.host)
+  // Default to arriving at this deployment's own server; the swap button covers
+  // leaving, and typing a handle re-points the source to wherever it really is.
+  if (home && other) return { from: { label: other.label, host: other.host }, to: home }
+  return { from: featured[0], to: home ?? featured[1] ?? featured[0] }
 }
 
 function statusLabel(run: RunView): string {

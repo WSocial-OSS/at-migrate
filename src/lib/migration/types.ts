@@ -20,6 +20,8 @@ export type PdsHost = {
   availableUserDomains?: string[]
   reachable?: boolean
   unreachableReason?: string
+  /** Accounts the relay has seen here — the directory's only popularity signal. */
+  accountCount?: number
 }
 
 export type Direction = { from: PdsHost; to: PdsHost }

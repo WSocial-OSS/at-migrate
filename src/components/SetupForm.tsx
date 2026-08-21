@@ -1,8 +1,10 @@
 'use client'
 
-import { useState } from 'react'
-import DirectionPicker from './DirectionPicker'
+import { useEffect, useRef, useState } from 'react'
+import DirectionPicker, { type DirectoryEntry } from './DirectionPicker'
 import type { Direction, PdsHost } from '@/lib/migration/types'
+
+type Detected = { did: string; handle?: string; didMethod: string; host: string; label: string }
 
 export type SetupValues = {
   identifier: string
@@ -16,14 +18,18 @@ export type SetupValues = {
  * should pick a new handle for a migration that was never going to start.
  */
 export default function SetupForm({
-  hosts,
+  featured,
+  directory,
+  totalHosts,
   direction,
   onDirectionChange,
   onSubmit,
   busy,
   error,
 }: {
-  hosts: PdsHost[]
+  featured: PdsHost[]
+  directory: DirectoryEntry[]
+  totalHosts: number
   direction: Direction
   onDirectionChange: (d: Direction) => void
   onSubmit: (values: SetupValues) => void
@@ -34,8 +40,51 @@ export default function SetupForm({
   const [password, setPassword] = useState('')
   const [keepSourceActive, setKeepSourceActive] = useState(false)
   const [advanced, setAdvanced] = useState(false)
+  const [detected, setDetected] = useState<Detected | null>(null)
+  const [detecting, setDetecting] = useState(false)
+  const directionRef = useRef(direction)
+  directionRef.current = direction
 
-  const ready = identifier.trim().length > 2 && password.length > 0 && direction.from.host !== direction.to.host
+  /**
+   * Look up where the account actually lives as soon as there is enough handle
+   * to try. The DID document names the PDS, so any of the network's servers
+   * works as a source without being in a list — and nobody has to know which
+   * host they are on.
+   */
+  useEffect(() => {
+    const id = identifier.trim().replace(/^@/, '')
+    if (id.length < 4 || (!id.includes('.') && !id.startsWith('did:'))) {
+      setDetected(null)
+      return
+    }
+    setDetecting(true)
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/resolve?identifier=${encodeURIComponent(id)}`)
+        if (!res.ok) {
+          setDetected(null)
+          return
+        }
+        const found = (await res.json()) as Detected
+        setDetected(found)
+        const current = directionRef.current
+        // Correct the source to wherever the account really is, unless that is
+        // the destination — then the direction itself is what needs fixing.
+        if (found.host !== current.from.host && found.host !== current.to.host) {
+          onDirectionChange({ ...current, from: { label: found.label, host: found.host } })
+        }
+      } catch {
+        setDetected(null)
+      } finally {
+        setDetecting(false)
+      }
+    }, 450)
+    return () => clearTimeout(timer)
+  }, [identifier, onDirectionChange])
+
+  const alreadyThere = !!detected && detected.host === direction.to.host
+  const ready =
+    identifier.trim().length > 2 && password.length > 0 && direction.from.host !== direction.to.host && !alreadyThere
 
   return (
     <form
@@ -44,7 +93,14 @@ export default function SetupForm({
         if (ready && !busy) onSubmit({ identifier, password, keepSourceActive })
       }}
     >
-      <DirectionPicker hosts={hosts} direction={direction} onChange={onDirectionChange} disabled={busy} />
+      <DirectionPicker
+        featured={featured}
+        directory={directory}
+        totalHosts={totalHosts}
+        direction={direction}
+        onChange={onDirectionChange}
+        disabled={busy}
+      />
 
       <div className="card">
         <h2>What comes with you</h2>
@@ -86,6 +142,19 @@ export default function SetupForm({
             onChange={(e) => setIdentifier(e.target.value)}
             disabled={busy}
           />
+          {detecting && !detected && <p className="help">Looking up where your account lives…</p>}
+          {detected && !alreadyThere && (
+            <p className="help">
+              Found on <b>{detected.label}</b>
+              {detected.label !== detected.host && ` (${detected.host})`}
+              {detected.didMethod === 'web' && ' — a did:web identity, so you publish the final change yourself'}
+            </p>
+          )}
+          {alreadyThere && (
+            <p className="help" style={{ color: 'var(--warn)' }}>
+              This account already lives on {direction.to.label}. Use the swap button if you meant to move it away.
+            </p>
+          )}
         </div>
         <div className="field">
           <label htmlFor="password">Account password</label>

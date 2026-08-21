@@ -15,6 +15,44 @@ account; reversing it means swapping the two hosts. There is no separate
 *is* the return trip, and the receipt a completed run produces records the
 reverse direction so the wizard can be seeded from it.
 
+## Every atproto network fits
+
+There is no hardcoded list of networks. Two mechanisms cover the whole protocol:
+
+**The source is discovered, not chosen.** Type a handle and `/api/resolve`
+resolves it to a DID, reads the DID document, and takes the PDS endpoint from
+there. The form then re-labels itself around whatever it found. A self-hosted
+server nobody has heard of works with no configuration — `bnewbold.net` resolves
+to `pds.robocracy.org` and the wizard just gets on with it.
+
+**The destination list is the network's own.** A relay has to know every PDS it
+indexes, so `com.atproto.sync.listHosts` is the closest thing to a census —
+about 1,770 listable servers. `src/lib/atproto/relay.ts` caches it for 30
+minutes and keeps serving stale data if a refresh fails.
+
+What that raw list needs, and `src/lib/atproto/registry.ts` supplies:
+
+- **Bluesky is added back.** It never appears under its own name — only its 89
+  internal `*.host.bsky.network` shards do, holding ~22.8M accounts. Those are
+  collapsed out of the directory (you cannot sign up on one) and their accounts
+  credited to `bsky.social`, or the largest network on atproto would be missing
+  from the picker entirely. A shard reached by handle resolution is still the
+  right endpoint to talk to — it just gets labelled "Bluesky".
+- **Bridges are excluded.** `atproto.brid.gy` is the fourth-largest host by
+  account count and is not an account home; offering it as a destination would
+  only produce a confusing failure.
+- **Throwaway deploys are excluded** — `*.up.railway.app`, `*.fly.dev`, tunnels.
+  Still reachable by typing the hostname, just not advertised as somewhere to live.
+- **Names where names exist.** Bluesky, W, EuroSky, Blacksky, Northsky, Spark,
+  Tangled, Roomy, Surf and friends read as products; everything else honestly
+  shows its hostname.
+
+Scale forced the shape of the API. Probing 1,770 servers per page load is out of
+the question, so `/api/hosts` has three modes: featured hosts probed on load,
+`?q=` searching the full directory server side, and `?probe=host` verifying the
+one server someone actually picked. Whatever the picker says, the engine
+re-checks the destination with `describeServer` at preflight.
+
 ## What it actually does
 
 The standard atproto account migration, in the order that keeps the account
@@ -58,14 +96,14 @@ cp .env.example .env.local
 
 | Variable | Notes |
 | --- | --- |
-| `WSOCIAL_PDS_HOST` | **You must set this.** The WSocial PDS hostname. It is the one value that cannot be guessed; every other default in this repo was probed against the live network. If it is wrong, the direction picker shows WSocial as "not answering" rather than failing mid-migration. |
-| `WSOCIAL_INVITE_CODE` | Optional. Only relevant if the WSocial PDS is invite-only. |
+| `WSOCIAL_PDS_HOST` | `pds.wsocial.network` — the W PDS, confirmed against the live network (a W account, `anna.wsocial.eu`, resolves there). It serves `.wsocial.eu` handles and is **invite-only**, so the wizard asks arrivals for an invite code. Not `wsocial.news`, which is the marketing site; `api.wsocial.eu` and `bsky.wsocial.eu` are aliases of the same server, and `pds.wsocial.eu` currently 503s. |
 | `EUROSKY_PDS_HOST` | Optional override. Defaults to `eurosky.social`, verified as a live PDS (`did:web:eurosky.social`). |
-| `EXTRA_PDS_HOSTS` | Optional, `Label|hostname` comma separated. |
+| `EXTRA_PDS_HOSTS` | Optional, `Label|hostname` comma separated. Pins extra hosts ahead of the live directory. |
+| `ATPROTO_RELAY_HOST` | Optional. Relay used for the host directory; defaults to `relay1.us-west.bsky.network`. |
 
-Every host — configured or typed in by the user — is probed with
-`com.atproto.server.describeServer` before the wizard will use it, so a stale
-hostname degrades to a disabled menu entry instead of a broken run.
+Every host the wizard is actually asked to use is probed with
+`com.atproto.server.describeServer` first, so a stale or wrong hostname degrades
+to "not answering" instead of a broken run.
 
 ## Running it
 
@@ -130,8 +168,10 @@ src/lib/migration/engine.ts   MigrationRun — the whole migration, framework-fr
 src/lib/migration/types.ts    Domain types, including the Blocker union
 src/lib/migration/store.ts    In-memory run registry (the swappable part)
 src/lib/migration/receipt.ts  Downloadable record + the reverse direction
+src/lib/atproto/relay.ts      Live host directory from a relay, cached
+src/lib/atproto/registry.ts   Naming, and which hosts are not account homes
 src/lib/atproto/*             Host probing, identity resolution, URL handling
-src/app/api/*                 Thin HTTP layer: start, observe (SSE), answer, retry, cancel
+src/app/api/*                 Thin HTTP layer: hosts/resolve, then start, observe (SSE), answer, retry, cancel
 src/components/*              The wizard — a renderer of run state
 ```
 

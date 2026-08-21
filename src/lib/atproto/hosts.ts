@@ -5,24 +5,17 @@ import { serviceUrl } from './url'
 export { serviceUrl }
 
 /**
- * Hosts offered in the direction picker.
- *
- * These are starting points, not a source of truth: every host is probed with
- * com.atproto.server.describeServer before the wizard will use it, and the user
- * can type any hostname. A stale entry therefore degrades to "unreachable"
- * rather than to a broken migration.
+ * Hosts this deployment always offers, ahead of the live directory: its own
+ * server first, then any operator-pinned extras. Everything else the network
+ * runs comes from the relay directory.
  */
 export function configuredHosts(): PdsHost[] {
   const wsocialHost = process.env.WSOCIAL_PDS_HOST?.trim()
-
-  const hosts: PdsHost[] = [
-    { label: 'Bluesky', host: 'bsky.social' },
-    { label: 'EuroSky', host: process.env.EUROSKY_PDS_HOST?.trim() || 'eurosky.social' },
-  ]
+  const hosts: PdsHost[] = []
 
   if (wsocialHost) {
     // The product is "W" in their own copy; WSocial is the company.
-    hosts.unshift({ label: 'W', host: wsocialHost, home: true })
+    hosts.push({ label: 'W', host: wsocialHost, home: true })
   }
 
   for (const entry of (process.env.EXTRA_PDS_HOSTS ?? '').split(',')) {
@@ -30,8 +23,6 @@ export function configuredHosts(): PdsHost[] {
     if (label && host) hosts.push({ label, host })
   }
 
-  // A host configured as WSocial may also be one of the defaults; the first
-  // entry wins so the home server keeps its label.
   const seen = new Set<string>()
   return hosts.filter((h) => {
     const key = h.host.toLowerCase().replace(/^https?:\/\//, '')
@@ -41,11 +32,6 @@ export function configuredHosts(): PdsHost[] {
   })
 }
 
-/**
- * Ask a host to describe itself. This doubles as the "is this actually a PDS?"
- * check and as the source of the signup requirements we need to show the user
- * (invite code, phone verification, which handle domains are on offer).
- */
 export async function describeHost(host: PdsHost): Promise<PdsHost> {
   try {
     const agent = new AtpAgent({ service: serviceUrl(host.host) })

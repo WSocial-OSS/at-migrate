@@ -171,17 +171,28 @@ code, kbd, .mono {
 
 .hostMenu {
   margin-top: 12px; border: 1px solid var(--border-secondary);
-  border-radius: var(--r-inner); overflow: hidden;
+  border-radius: var(--r-inner); overflow: hidden; background: var(--base);
 }
-.hostMenu button {
-  display: block; width: 100%; text-align: left; font: inherit; color: var(--text-primary);
-  background: var(--base); border: 0; border-bottom: 1px solid var(--border-secondary);
-  padding: 12px 16px; cursor: pointer;
+.hostSearch { padding: 12px; border-bottom: 1px solid var(--border-secondary); }
+.hostSearch input { border-radius: 99px; }
+
+/* The directory runs to ~1,800 servers, so the list scrolls rather than growing
+   the page, and search narrows it server side. */
+.hostList { max-height: 300px; overflow-y: auto; }
+.hostList button {
+  display: flex; align-items: baseline; gap: 12px; width: 100%; text-align: left;
+  font: inherit; color: var(--text-primary); background: var(--base); border: 0;
+  border-bottom: 1px solid var(--border-secondary); padding: 11px 16px; cursor: pointer;
 }
-.hostMenu button:last-child { border-bottom: 0; }
-.hostMenu button:hover { background: var(--surface-2); }
-.hostMenu button[disabled] { color: var(--text-tertiary); cursor: not-allowed; }
+.hostList button:last-child { border-bottom: 0; }
+.hostList button:hover:not([disabled]) { background: var(--surface-2); }
+.hostList button[disabled] { color: var(--text-tertiary); cursor: not-allowed; }
+.hostList button[aria-selected='true'] { background: var(--link-10); }
+.hostRowMain { display: flex; align-items: baseline; gap: 8px; min-width: 0; flex: 1; }
+.hostRowName { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hostRowTail { flex: none; font-variant-numeric: tabular-nums; }
 .hostMenu .meta { color: var(--text-secondary); font-size: 13px; }
+.hostEmpty { color: var(--text-secondary); font-size: 13.5px; margin: 0; padding: 14px 16px; }
 
 /* ---------- forms ---------- */
 
