@@ -1,0 +1,29 @@
+{
+  "name": "wsocial-migrate",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Account migration wizard for moving atproto accounts between PDS hosts (Bluesky, EuroSky, WSocial) in either direction.",
+  "scripts": {
+    "dev": "next dev -p 3210",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test --experimental-strip-types \"src/**/*.test.ts\""
+  },
+  "dependencies": {
+    "@atproto/api": "^0.20.41",
+    "@atproto/identity": "^0.5.9",
+    "next": "^16.3.2",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "typescript": "^7.0.2"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
