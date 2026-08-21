@@ -118,7 +118,7 @@ export default function Wizard() {
   if (!hosts || !direction) {
     return (
       <div className="card">
-        <p style={{ margin: 0, color: 'var(--text-dim)' }}>Checking which servers are available…</p>
+        <p className="dim" style={{ margin: 0 }}>Checking which servers are available…</p>
       </div>
     )
   }
@@ -140,12 +140,11 @@ export default function Wizard() {
 
   return (
     <>
-      <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+      <div className="card railTop">
         <strong>{run.direction.from.label}</strong>
-        <span style={{ color: 'var(--text-faint)' }}>→</span>
+        <span className="arrow">→</span>
         <strong>{run.direction.to.label}</strong>
-        <span className="spacer" style={{ flex: 1 }} />
-        <span style={{ fontSize: 12.5, color: 'var(--text-dim)' }}>{statusLabel(run)}</span>
+        <span className="status">{statusLabel(run)}</span>
       </div>
 
       {!finished && (

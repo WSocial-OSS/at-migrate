@@ -109,7 +109,7 @@ export default function SetupForm({
         </div>
 
         <details style={{ marginTop: 14 }} open={advanced} onToggle={(e) => setAdvanced(e.currentTarget.open)}>
-          <summary style={{ cursor: 'pointer', color: 'var(--text-dim)', fontSize: 13 }}>Advanced</summary>
+          <summary className="dim" style={{ cursor: 'pointer', fontSize: 13.5 }}>Advanced</summary>
           <div style={{ marginTop: 12 }}>
             <label className="check">
               <input
@@ -140,7 +140,7 @@ export default function SetupForm({
           <button type="submit" className="primary" disabled={!ready || busy}>
             {busy ? 'Checking…' : 'Check my account'}
           </button>
-          <span className="help" style={{ color: 'var(--text-faint)', fontSize: 12.5 }}>
+          <span className="faint" style={{ fontSize: 13 }}>
             Nothing moves yet.
           </span>
         </div>

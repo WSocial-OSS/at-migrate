@@ -62,7 +62,7 @@ export default function RunProgress({ run }: { run: RunView }) {
                           {s.status === 'skipped' && ' — skipped'}
                         </span>
                         {s.progress && s.progress.total > 0 && (
-                          <span style={{ color: 'var(--text-faint)' }}>
+                          <span className="faint">
                             {s.progress.done}/{s.progress.total}
                           </span>
                         )}
@@ -94,7 +94,7 @@ export function Inventory({ run }: { run: RunView }) {
       <dl className="kv">
         <dt>Account</dt>
         <dd>
-          {inv.handle} <span className="mono" style={{ color: 'var(--text-dim)' }}>{inv.did}</span>
+          {inv.handle} <span className="mono dim">{inv.did}</span>
         </dd>
         <dt>Records</dt>
         <dd>{inv.indexedRecords?.toLocaleString() ?? 'unknown'}</dd>

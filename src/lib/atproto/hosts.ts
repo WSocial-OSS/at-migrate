@@ -21,7 +21,8 @@ export function configuredHosts(): PdsHost[] {
   ]
 
   if (wsocialHost) {
-    hosts.unshift({ label: 'WSocial', host: wsocialHost, home: true })
+    // The product is "W" in their own copy; WSocial is the company.
+    hosts.unshift({ label: 'W', host: wsocialHost, home: true })
   }
 
   for (const entry of (process.env.EXTRA_PDS_HOSTS ?? '').split(',')) {

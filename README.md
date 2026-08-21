@@ -101,6 +101,28 @@ blocker request for a run it has never heard of.
 Set per-environment variables on the service (`WSOCIAL_PDS_HOST` at minimum),
 then `railway up` — or connect the GitHub repo for push-to-deploy.
 
+## Brand
+
+The look is WSocial's, taken from wsocial.news rather than approximated:
+
+- `src/app/globals.css` carries their exact tokens — light values from that site's
+  `:root`, dark values from its `.dark` class, unchanged. Their `--link` (teal
+  `#05857c` light, mint `#1df2ba` dark) is this app's primary accent; `--purple`
+  marks the "your turn" states.
+- Inter Tight via `next/font/google`, self-hosted at build time so no runtime
+  request leaves the box.
+- `public/logo/logo.svg` and `logo-LM.svg` are their dark and light marks;
+  `src/app/favicon.ico` is their favicon. The masthead swaps marks on
+  `prefers-color-scheme`, the same way their header does.
+- Their house style is large radii (24–40px), borderless plum/white cards on a
+  tinted ground, and pill buttons at weight 500 — matched here.
+
+The product is called **W** in their own copy, so that is the label the wizard
+uses for the home server. WSocial stays the company name.
+
+If the palette on wsocial.news is retouched, the tokens at the top of
+`globals.css` are the only place this app needs to follow.
+
 ## Architecture
 
 ```

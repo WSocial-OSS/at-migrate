@@ -41,11 +41,11 @@ export default function Outcome({
     <>
       <div className="card">
         <h2>{ok ? 'Done' : 'Moved, with notes'}</h2>
-        <p style={{ marginTop: 0, fontSize: 17, fontWeight: 550 }}>
+        <p className="lead" style={{ marginTop: 0 }}>
           {run.inventory?.handle ? `${run.inventory.handle} now lives on ` : 'Your account now lives on '}
           {run.direction.to.label}.
         </p>
-        <p style={{ marginTop: 0, color: 'var(--text-dim)' }}>
+        <p className="dim" style={{ marginTop: 0 }}>
           Sign in to {run.direction.to.label} with your new handle and password. Your followers do not need to do
           anything — they were following your identity, and it came with you.
         </p>
@@ -85,7 +85,7 @@ export default function Outcome({
 
       <div className="card">
         <h2>If you want to come back</h2>
-        <p style={{ marginTop: 0, color: 'var(--text-dim)' }}>
+        <p className="dim" style={{ marginTop: 0 }}>
           Nothing here is one-way. Your old account on {run.direction.from.label} still holds its data — it was
           deactivated, not deleted — and moving back is this same tool with the arrow reversed. You keep the same
           identity either way, so no move costs you your followers.
@@ -108,9 +108,9 @@ function Failure({
 }) {
   const failed = run.steps.find((s) => s.status === 'failed')
   return (
-    <div className="card" style={{ borderColor: 'var(--err)' }}>
-      <h2 style={{ color: 'var(--err)' }}>Stopped part way</h2>
-      <p style={{ marginTop: 0 }}>{failed?.error ?? 'Something went wrong.'}</p>
+    <div className="card problem">
+      <h2>Stopped part way</h2>
+      <p>{failed?.error ?? 'Something went wrong.'}</p>
       <div className="note" data-tone={run.safeToAbandon ? 'ok' : 'warn'}>
         {run.safeToAbandon ? (
           <>

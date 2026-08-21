@@ -48,9 +48,9 @@ export default function BlockerForm({
 
 function Shell({ title, message, children }: { title: string; message: string; children: React.ReactNode }) {
   return (
-    <div className="card" style={{ borderColor: 'var(--accent)' }}>
-      <h2 style={{ color: 'var(--accent)' }}>{title}</h2>
-      <p style={{ marginTop: 0 }}>{message}</p>
+    <div className="card attention">
+      <h2>{title}</h2>
+      <p>{message}</p>
       {children}
     </div>
   )
@@ -193,7 +193,7 @@ function DestinationForm({
           <button type="submit" className="primary" disabled={!ready || busy}>
             {busy ? 'Working…' : 'Create it and move my data'}
           </button>
-          <span style={{ color: 'var(--text-faint)', fontSize: 12.5 }}>Still reversible after this.</span>
+          <span className="faint" style={{ fontSize: 13 }}>Still reversible after this.</span>
         </div>
       </form>
     </Shell>
@@ -212,20 +212,7 @@ function DidWebForm({
   const json = useMemo(() => JSON.stringify(blocker.didDocument, null, 2), [blocker.didDocument])
   return (
     <Shell title="Publish your identity document" message={blocker.message}>
-      <pre
-        className="mono"
-        style={{
-          background: 'var(--surface-2)',
-          border: '1px solid var(--border)',
-          borderRadius: 8,
-          padding: 12,
-          overflow: 'auto',
-          maxHeight: 260,
-          margin: '0 0 12px',
-        }}
-      >
-        {json}
-      </pre>
+      <pre className="mono codeblock">{json}</pre>
       <div className="actions">
         <button type="button" className="secondary" onClick={() => navigator.clipboard?.writeText(json)}>
           Copy document
