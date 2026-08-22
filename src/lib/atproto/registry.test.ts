@@ -24,6 +24,14 @@ test('known networks get their product name, everyone else their hostname', () =
   assert.equal(labelFor('pds.robocracy.org'), 'pds.robocracy.org')
 })
 
+test('community PDS products keep their public names in the directory', () => {
+  // Wafrn: federated social network (open source, official mobile app) whose AT Proto
+  // entry point lives at at.app.wafrn.net — 1.7k accounts seen by the relay, active.
+  assert.equal(labelFor('at.app.wafrn.net'), 'Wafrn')
+  // Gems: consumer app with its own PDS at gems.xyz — 7.2k accounts, active.
+  assert.equal(labelFor('gems.xyz'), 'Gems')
+})
+
 test('bridges and throwaway deploys stay out of the directory', () => {
   assert.equal(isBridge('atproto.brid.gy'), true)
   assert.equal(isListable('atproto.brid.gy'), false)
