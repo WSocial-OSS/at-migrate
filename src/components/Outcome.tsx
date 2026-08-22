@@ -1,6 +1,7 @@
 'use client'
 
 import type { RunView } from '@/lib/migration/types'
+import { copy } from '@/lib/ui/copy'
 
 export default function Outcome({
   run,
@@ -19,16 +20,13 @@ export default function Outcome({
   if (run.status === 'canceled') {
     return (
       <div className="card">
-        <h2>Stopped</h2>
+        <h2>{copy.outcome.stopped}</h2>
         <p style={{ marginTop: 0 }}>
-          The migration was canceled.{' '}
-          {run.safeToAbandon
-            ? 'Your account never left ' + run.direction.from.label + ', so there is nothing to undo.'
-            : 'Your identity had already moved, so check the state of both accounts before trying again.'}
+          {run.safeToAbandon ? copy.outcome.canceledSafe(run.direction.from.label) : copy.outcome.canceledMoved}
         </p>
         <div className="actions">
           <button type="button" className="secondary" onClick={onStartOver}>
-            Start over
+            {copy.outcome.startOver}
           </button>
         </div>
       </div>
@@ -40,7 +38,7 @@ export default function Outcome({
   return (
     <>
       <div className="card">
-        <h2>{ok ? 'Done' : 'Moved, with notes'}</h2>
+        <h2>{ok ? copy.outcome.done : copy.outcome.doneWithNotes}</h2>
         <p className="lead" style={{ marginTop: 0 }}>
           {run.inventory?.handle ? `${run.inventory.handle} now lives on ` : 'Your account now lives on '}
           {run.direction.to.label}.

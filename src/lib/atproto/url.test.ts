@@ -20,3 +20,8 @@ test('normalizeHost makes hosts and service URLs comparable', () => {
   assert.equal(normalizeHost('https://pds.example.com:443'), 'pds.example.com')
   assert.notEqual(normalizeHost('eurosky.social'), normalizeHost('bsky.social'))
 })
+
+test('serviceUrl strips trailing slashes and keeps an explicit https URL', () => {
+  assert.equal(serviceUrl('https://pds.example.com/'), 'https://pds.example.com')
+  assert.equal(serviceUrl('http://127.0.0.1:2583'), 'http://127.0.0.1:2583')
+})

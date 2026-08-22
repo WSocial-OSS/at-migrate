@@ -42,8 +42,9 @@ npm run typecheck
 npm run build
 ```
 
-`npm test` is Node's built-in test runner over `src/**/*.test.ts`. There are no
-live-PDS integration tests, and we will not add any that need real credentials.
+`npm test` runs `tsx --test` over `src/**/*.test.ts`. Tests that hit the public
+network (handle resolution) are skipped unless you set `LIVE=1`. There are no
+tests that need a real account password, and we will not add any.
 
 ## Developer Certificate of Origin
 

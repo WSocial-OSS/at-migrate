@@ -3,17 +3,6 @@ import { describeHost } from '@/lib/atproto/hosts'
 import { normalizeHost, serviceUrl } from '@/lib/atproto/url'
 import { resolveIdentity } from '@/lib/atproto/identity'
 import { formatBytes } from './format'
-
-/**
- * The rotation keys, handles and service endpoints the destination wants written
- * into the identity record. Shaped to be passed straight to signPlcOperation.
- */
-type RecommendedDidCredentials = {
-  rotationKeys?: string[]
-  alsoKnownAs?: string[]
-  verificationMethods?: Record<string, unknown>
-  services?: Record<string, unknown>
-}
 import {
   MigrationError,
   STEP_IDS,
@@ -28,6 +17,17 @@ import {
   type TargetDetails,
   type VerificationReport,
 } from './types'
+
+/**
+ * The rotation keys, handles and service endpoints the destination wants written
+ * into the identity record. Shaped to be passed straight to signPlcOperation.
+ */
+type RecommendedDidCredentials = {
+  rotationKeys?: string[]
+  alsoKnownAs?: string[]
+  verificationMethods?: Record<string, unknown>
+  services?: Record<string, unknown>
+}
 
 const BLOB_PAGE = 500
 /** How long a run may sit waiting on the user before we drop its credentials. */
@@ -47,8 +47,9 @@ type Listener = (view: RunView) => void
 export class MigrationRun {
   readonly id: string
   private view: RunView
-  private input: StartRunInput
-  private target_: TargetDetails | undefined
+  /** JS-private so JSON.stringify(run) cannot leak the account password. */
+  #input: StartRunInput
+  #target_: TargetDetails | undefined
   private source: AtpAgent
   private target: AtpAgent
   private listeners = new Set<Listener>()
@@ -58,7 +59,7 @@ export class MigrationRun {
 
   constructor(id: string, input: StartRunInput) {
     this.id = id
-    this.input = input
+    this.#input = input
     this.source = new AtpAgent({ service: serviceUrl(input.direction.from.host) })
     this.target = new AtpAgent({ service: serviceUrl(input.direction.to.host) })
     this.view = {
@@ -142,7 +143,7 @@ export class MigrationRun {
 
   cancel() {
     this.canceled = true
-    if (this.view.status === 'running' || this.view.status === 'blocked') {
+    if (this.view.status === 'idle' || this.view.status === 'running' || this.view.status === 'blocked') {
       this.view.status = 'canceled'
       this.view.endedAt = Date.now()
       this.log('warn', 'run', 'Canceled by the user.')
@@ -152,13 +153,13 @@ export class MigrationRun {
 
   /** Credentials live only as long as the run needs them. */
   forgetCredentials() {
-    this.input = { ...this.input, source: { identifier: this.input.source.identifier, password: '' } }
-    if (this.target_) this.target_ = { ...this.target_, password: '', inviteCode: undefined }
+    this.#input = { ...this.#input, source: { identifier: this.#input.source.identifier, password: '' } }
+    if (this.#target_) this.#target_ = { ...this.#target_, password: '', inviteCode: undefined }
   }
 
   /** The handle the account ended up with, for the receipt. */
   get targetHandle(): string | undefined {
-    return this.target_?.handle
+    return this.#target_?.handle
   }
 
   private assertLive() {
@@ -168,6 +169,12 @@ export class MigrationRun {
   // ----------------------------------------------------------------------- driver
 
   async run(): Promise<RunView> {
+    if (this.canceled) {
+      this.view.status = 'canceled'
+      this.view.endedAt ??= Date.now()
+      this.emit()
+      return this.snapshot()
+    }
     this.view.status = 'running'
     this.emit()
 
@@ -232,7 +239,7 @@ export class MigrationRun {
   // ------------------------------------------------------------------------ steps
 
   private async preflight() {
-    const { from, to } = this.input.direction
+    const { from, to } = this.#input.direction
 
     if (normalizeHost(from.host) === normalizeHost(to.host)) {
       throw new MigrationError('The source and destination servers are the same.', {
@@ -307,9 +314,9 @@ export class MigrationRun {
 
   /** Sign in, pausing for a two-factor code instead of dead-ending on one. */
   private async loginToSource(label: string, authFactorToken?: string) {
-    const identifier = this.input.source.identifier.replace(/^@/, '')
+    const identifier = this.#input.source.identifier.replace(/^@/, '')
     try {
-      await this.source.login({ identifier, password: this.input.source.password, authFactorToken })
+      await this.source.login({ identifier, password: this.#input.source.password, authFactorToken })
     } catch (err) {
       if (!authFactorToken && /AuthFactorTokenRequired/i.test(errMessage(err))) {
         const answer = await this.waitForUser({
@@ -374,7 +381,7 @@ export class MigrationRun {
    * never going to work.
    */
   private async collectTargetDetails(currentHandle: string, to: typeof this.view.direction.to): Promise<TargetDetails> {
-    if (this.target_?.password) return this.target_
+    if (this.#target_?.password) return this.#target_
 
     const domains = to.availableUserDomains ?? []
     const localPart = currentHandle.split('.')[0]
@@ -404,7 +411,7 @@ export class MigrationRun {
       throw new MigrationError(`${to.label} requires an invite code.`, { retryable: true })
     }
 
-    this.target_ = details
+    this.#target_ = details
     return details
   }
 
@@ -527,7 +534,7 @@ export class MigrationRun {
 
     const answer = await this.waitForUser({
       kind: 'plc-token',
-      sentTo: maskEmail(this.input.source.identifier),
+      sentTo: maskEmail(this.#input.source.identifier),
       message: `${this.view.direction.from.label} just emailed a confirmation code to the address on your old account. Enter it to point your identity at ${this.view.direction.to.label}.`,
     })
 
@@ -569,7 +576,7 @@ export class MigrationRun {
     this.setStep('go-live', { detail: `Activating your account on ${this.view.direction.to.label}` })
     await this.target.com.atproto.server.activateAccount()
 
-    if (this.input.keepSourceActive) {
+    if (this.#input.keepSourceActive) {
       this.log('info', 'go-live', `Left the ${this.view.direction.from.label} account active at your request.`)
       return
     }

@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type Ref } from 'react'
 import type { Direction, PdsHost } from '@/lib/migration/types'
+import { copy } from '@/lib/ui/copy'
 
 export type DirectoryEntry = { label: string; host: string; accountCount: number; named: boolean }
 
@@ -34,6 +35,23 @@ export default function DirectionPicker({
   const [results, setResults] = useState<DirectoryEntry[]>(directory)
   const [searching, setSearching] = useState(false)
   const [checking, setChecking] = useState<string | null>(null)
+  const fromRef = useRef<HTMLButtonElement>(null)
+  const toRef = useRef<HTMLButtonElement>(null)
+  const searchRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    searchRef.current?.focus()
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      const opener = open === 'from' ? fromRef.current : toRef.current
+      setOpen(null)
+      setQuery('')
+      opener?.focus()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open])
 
   // Search runs server side against the whole directory; 1,800 entries is more
   // than is worth shipping to the browser just to filter.
@@ -98,36 +116,50 @@ export default function DirectionPicker({
 
   return (
     <div className="card">
-      <h2>Direction</h2>
+      <h2>{copy.direction.heading}</h2>
       <div className="direction">
-        <Tile side="from" host={direction.from} disabled={disabled} onClick={() => setOpen(open === 'from' ? null : 'from')} />
+        <Tile
+          ref={fromRef}
+          side="from"
+          host={direction.from}
+          disabled={disabled}
+          expanded={open === 'from'}
+          onClick={() => setOpen(open === 'from' ? null : 'from')}
+        />
         <button
           type="button"
           className="swap"
           disabled={disabled}
-          aria-label={`Swap: move from ${direction.to.label} to ${direction.from.label} instead`}
-          title="Reverse the direction"
+          aria-label={copy.direction.swap(direction.to.label, direction.from.label)}
+          title={copy.direction.swapTitle}
           onClick={() => onChange({ from: direction.to, to: direction.from })}
         >
           ⇄
         </button>
-        <Tile side="to" host={direction.to} disabled={disabled} onClick={() => setOpen(open === 'to' ? null : 'to')} />
+        <Tile
+          ref={toRef}
+          side="to"
+          host={direction.to}
+          disabled={disabled}
+          expanded={open === 'to'}
+          onClick={() => setOpen(open === 'to' ? null : 'to')}
+        />
       </div>
 
       {open && (
         <div className="hostMenu">
           <div className="hostSearch">
             <input
+              ref={searchRef}
               type="text"
-              autoFocus
-              placeholder={`Search ${totalHosts.toLocaleString()} servers, or type any hostname`}
+              placeholder={copy.direction.search(totalHosts)}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              aria-label="Search servers"
+              aria-label={copy.direction.searchAria}
             />
           </div>
 
-          <div className="hostList" role="listbox" aria-label={open === 'from' ? 'Server to move from' : 'Server to move to'}>
+          <div className="hostList" role="listbox" aria-label={open === 'from' ? copy.direction.listFrom : copy.direction.listTo}>
             {!query.trim() &&
               featured.map((h) => (
                 <HostRow
@@ -160,14 +192,14 @@ export default function DirectionPicker({
               <HostRow
                 label={typed}
                 host={typed}
-                hint="use this hostname"
+                hint={copy.direction.typedHint}
                 busy={checking === typed}
                 onClick={() => pick(open, { label: typed, host: typed })}
               />
             )}
 
             {!results.length && !showTyped && (
-              <p className="hostEmpty">{searching ? 'Searching…' : 'No server matches that. A full hostname works too.'}</p>
+              <p className="hostEmpty">{searching ? copy.direction.searching : copy.direction.empty}</p>
             )}
           </div>
         </div>
@@ -214,19 +246,32 @@ function Tile({
   host,
   onClick,
   disabled,
+  expanded,
+  ref,
 }: {
   side: 'from' | 'to'
   host: PdsHost
   onClick: () => void
   disabled?: boolean
+  expanded?: boolean
+  ref?: Ref<HTMLButtonElement>
 }) {
   return (
     // The accent marks the destination, so the arrow and the colour agree.
-    <button type="button" className="hostTile" data-dest={side === 'to'} onClick={onClick} disabled={disabled}>
-      <div className="role">{side === 'from' ? 'Moving from' : 'Moving to'}</div>
+    <button
+      ref={ref}
+      type="button"
+      className="hostTile"
+      data-dest={side === 'to'}
+      onClick={onClick}
+      disabled={disabled}
+      aria-expanded={!!expanded}
+      aria-haspopup="listbox"
+    >
+      <div className="role">{side === 'from' ? copy.direction.fromRole : copy.direction.toRole}</div>
       <div className="name">{host.label}</div>
       {host.reachable === false ? (
-        <div className="bad">{host.host} — not answering</div>
+        <div className="bad">{copy.direction.notAnsweringHost(host.host)}</div>
       ) : (
         <div className="host">{host.label === host.host ? ' ' : host.host}</div>
       )}
@@ -242,12 +287,12 @@ function tailFor(o: {
   hint?: string
   accountCount?: number
 }): string {
-  if (o.busy) return 'checking…'
-  if (o.unreachable) return 'not answering'
+  if (o.busy) return copy.direction.checking
+  if (o.unreachable) return copy.direction.notAnswering
   if (o.hint) return o.hint
   const bits: string[] = []
   if (o.accountCount) bits.push(formatAccounts(o.accountCount))
-  if (o.inviteOnly) bits.push('invite only')
+  if (o.inviteOnly) bits.push(copy.direction.inviteOnly)
   return bits.join(' · ')
 }
 

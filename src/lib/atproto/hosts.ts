@@ -18,6 +18,11 @@ export function configuredHosts(): PdsHost[] {
     hosts.push({ label: 'W', host: wsocialHost, home: true })
   }
 
+  const euroskyHost = process.env.EUROSKY_PDS_HOST?.trim()
+  if (euroskyHost) {
+    hosts.push({ label: 'EuroSky', host: euroskyHost })
+  }
+
   for (const entry of (process.env.EXTRA_PDS_HOSTS ?? '').split(',')) {
     const [label, host] = entry.split('|').map((s) => s?.trim())
     if (label && host) hosts.push({ label, host })
