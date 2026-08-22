@@ -53,6 +53,16 @@ export default function DirectionPicker({
     return () => window.removeEventListener('keydown', onKey)
   }, [open])
 
+  // The opener tile gets focus back when the menu closes for any reason, so
+  // keyboard users are not dropped at the top of the page after picking a server.
+  const closeMenu = () => {
+    const opener = open === 'from' ? fromRef.current : toRef.current
+    setOpen(null)
+    setQuery('')
+    // Wait for the menu to unmount, then hand focus back to its tile.
+    requestAnimationFrame(() => opener?.focus())
+  }
+
   // Search runs server side against the whole directory; 1,800 entries is more
   // than is worth shipping to the browser just to filter.
   useEffect(() => {
@@ -88,8 +98,7 @@ export default function DirectionPicker({
           ? { ...direction, from: host }
           : { ...direction, to: host },
     )
-    setOpen(null)
-    setQuery('')
+    closeMenu()
   }
 
   /** Verify a host on selection — the directory says it exists, not that it can take you. */

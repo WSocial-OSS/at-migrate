@@ -168,6 +168,8 @@ export default function SetupForm({
             id="password"
             type="password"
             autoComplete="current-password"
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? 'setup-error' : undefined}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             disabled={busy}
@@ -198,7 +200,7 @@ export default function SetupForm({
         </details>
 
         {error && (
-          <div className="note" data-tone="err" role="alert" style={{ marginTop: 14 }}>
+          <div className="note" data-tone="err" role="alert" id="setup-error" style={{ marginTop: 14 }}>
             {error}
           </div>
         )}
