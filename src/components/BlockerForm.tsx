@@ -47,9 +47,11 @@ export default function BlockerForm({
 
 function Shell({ title, message, children }: { title: string; message: string; children: React.ReactNode }) {
   return (
+    // The card mounts when the engine blocks, so a live region here announces
+    // the new demand to screen readers without stealing focus from the form.
     <div className="card attention">
       <h2>{title}</h2>
-      <p>{message}</p>
+      <p aria-live="polite">{message}</p>
       {children}
     </div>
   )
@@ -146,6 +148,7 @@ function DestinationForm({
             ref={first}
             id="newHandle"
             type="text"
+            autoComplete="username"
             value={handle}
             onChange={(e) => setHandle(e.target.value)}
             disabled={busy}
