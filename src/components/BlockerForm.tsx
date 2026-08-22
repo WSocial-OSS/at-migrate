@@ -1,7 +1,8 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Blocker, Direction } from '@/lib/migration/types'
+import { copy } from '@/lib/ui/copy'
 
 /**
  * The only interactive surface during a run. Whatever the engine is waiting for
@@ -21,20 +22,18 @@ export default function BlockerForm({
 }) {
   switch (blocker.kind) {
     case 'source-2fa':
-      return <CodeForm blocker={blocker} label="Sign-in code" cta="Continue" onSubmit={onSubmit} busy={busy} />
+      return <CodeForm blocker={blocker} label="Sign-in code" cta={copy.blocker.codeCta} onSubmit={onSubmit} busy={busy} />
     case 'plc-token':
       return (
         <CodeForm
           blocker={blocker}
           label={`Confirmation code${blocker.sentTo ? ` sent to ${blocker.sentTo}` : ''}`}
-          cta="Point my identity at the new server"
+          cta={copy.blocker.plcCta}
           onSubmit={onSubmit}
           busy={busy}
           footer={
             <div className="note" data-tone="warn">
-              This is the step that actually moves you. After it, the network resolves your handle to{' '}
-              <strong>{direction.to.label}</strong>. You can always come back later — it is the same operation in
-              reverse, not a rebuild.
+              {copy.blocker.plcFooter(direction.to.label)}
             </div>
           }
         />
@@ -72,8 +71,12 @@ function CodeForm({
   footer?: React.ReactNode
 }) {
   const [code, setCode] = useState('')
+  const first = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    first.current?.focus()
+  }, [])
   return (
-    <Shell title="Your turn" message={blocker.message}>
+    <Shell title={copy.blocker.yourTurn} message={blocker.message}>
       <form
         onSubmit={(e) => {
           e.preventDefault()
@@ -83,12 +86,12 @@ function CodeForm({
         <div className="field">
           <label htmlFor="code">{label}</label>
           <input
+            ref={first}
             id="code"
             className="mono"
             type="text"
             inputMode="text"
             autoComplete="one-time-code"
-            autoFocus
             placeholder="XXXXX-XXXXX"
             value={code}
             onChange={(e) => setCode(e.target.value)}
@@ -98,7 +101,7 @@ function CodeForm({
         {footer}
         <div className="actions">
           <button type="submit" className="primary" disabled={!code.trim() || busy}>
-            {busy ? 'Working…' : cta}
+            {busy ? copy.blocker.working : cta}
           </button>
         </div>
       </form>
@@ -125,8 +128,12 @@ function DestinationForm({
   const ready =
     handle.trim().includes('.') && email.trim().includes('@') && password.length >= 8 && (!blocker.inviteCodeRequired || inviteCode.trim())
 
+  const first = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    first.current?.focus()
+  }, [])
   return (
-    <Shell title={`Your account on ${direction.to.label}`} message={blocker.message}>
+    <Shell title={copy.blocker.destTitle(direction.to.label)} message={blocker.message}>
       <form
         onSubmit={(e) => {
           e.preventDefault()
@@ -134,11 +141,11 @@ function DestinationForm({
         }}
       >
         <div className="field">
-          <label htmlFor="newHandle">Handle on {direction.to.label}</label>
+          <label htmlFor="newHandle">{copy.blocker.destHandle(direction.to.label)}</label>
           <input
+            ref={first}
             id="newHandle"
             type="text"
-            autoFocus
             value={handle}
             onChange={(e) => setHandle(e.target.value)}
             disabled={busy}
@@ -153,7 +160,7 @@ function DestinationForm({
           </p>
         </div>
         <div className="field">
-          <label htmlFor="newEmail">Email for the new account</label>
+          <label htmlFor="newEmail">{copy.blocker.destEmail}</label>
           <input
             id="newEmail"
             type="email"
@@ -164,20 +171,21 @@ function DestinationForm({
           />
         </div>
         <div className="field">
-          <label htmlFor="newPassword">Password for the new account</label>
+          <label htmlFor="newPassword">{copy.blocker.destPassword}</label>
           <input
             id="newPassword"
             type="password"
             autoComplete="new-password"
+            minLength={8}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             disabled={busy}
           />
-          <p className="help">At least 8 characters. This is separate from your old account’s password.</p>
+          <p className="help">{copy.blocker.destPasswordHelp}</p>
         </div>
         {blocker.inviteCodeRequired && (
           <div className="field">
-            <label htmlFor="invite">Invite code</label>
+            <label htmlFor="invite">{copy.blocker.destInvite}</label>
             <input
               id="invite"
               className="mono"
@@ -186,14 +194,14 @@ function DestinationForm({
               onChange={(e) => setInviteCode(e.target.value)}
               disabled={busy}
             />
-            <p className="help">{direction.to.label} is invite-only right now.</p>
+            <p className="help">{copy.blocker.destInviteHelp(direction.to.label)}</p>
           </div>
         )}
         <div className="actions">
           <button type="submit" className="primary" disabled={!ready || busy}>
-            {busy ? 'Working…' : 'Create it and move my data'}
+            {busy ? copy.blocker.working : copy.blocker.destSubmit}
           </button>
-          <span className="faint" style={{ fontSize: 13 }}>Still reversible after this.</span>
+          <span className="faint" style={{ fontSize: 13 }}>{copy.blocker.destStillReversible}</span>
         </div>
       </form>
     </Shell>
@@ -211,15 +219,15 @@ function DidWebForm({
 }) {
   const json = useMemo(() => JSON.stringify(blocker.didDocument, null, 2), [blocker.didDocument])
   return (
-    <Shell title="Publish your identity document" message={blocker.message}>
+    <Shell title={copy.blocker.didWebTitle} message={blocker.message}>
       <pre className="mono codeblock">{json}</pre>
       <div className="actions">
         <button type="button" className="secondary" onClick={() => navigator.clipboard?.writeText(json)}>
-          Copy document
+          {copy.blocker.copyDocument}
         </button>
         <span className="spacer" />
         <button type="button" className="primary" disabled={busy} onClick={() => onSubmit({ ack: 'published' })}>
-          {busy ? 'Checking…' : 'I have published it'}
+          {busy ? copy.blocker.checking : copy.blocker.published}
         </button>
       </div>
     </Shell>

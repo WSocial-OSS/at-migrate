@@ -1,4 +1,5 @@
 import Wizard from '@/components/Wizard'
+import { copy } from '@/lib/ui/copy'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,18 +11,12 @@ export default function Page() {
             swaps its logo between themes. */}
         <img className="mark" data-theme="light" src="/logo/logo-LM.svg" alt="W" width={34} height={34} />
         <img className="mark" data-theme="dark" src="/logo/logo.svg" alt="W" width={34} height={34} />
-        <h1>Move your account</h1>
+        <h1>{copy.page.title}</h1>
         <span className="tag">atproto</span>
       </div>
-      <p className="lede">
-        Take your handle, your posts and your followers from one server to another. Your account keeps the same
-        identity the whole way, so the move is reversible — the same tool brings you back.
-      </p>
+      <p className="lede">{copy.page.lede}</p>
       <Wizard />
-      <p className="footnote">
-        This runs the standard atproto account migration: your repository is exported, imported, and your identity
-        record is re-pointed with a code only you can approve. Nothing is deleted from the server you leave.
-      </p>
+      <p className="footnote">{copy.page.footnote}</p>
     </main>
   )
 }

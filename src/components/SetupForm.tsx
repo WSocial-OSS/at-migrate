@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import DirectionPicker, { type DirectoryEntry } from './DirectionPicker'
 import type { Direction, PdsHost } from '@/lib/migration/types'
+import { copy } from '@/lib/ui/copy'
 
 type Detected = { did: string; handle?: string; didMethod: string; host: string; label: string }
 
@@ -103,7 +104,7 @@ export default function SetupForm({
       />
 
       <div className="card">
-        <h2>What comes with you</h2>
+        <h2>{copy.setup.whatComes}</h2>
         <ul className="manifest">
           <Row yes>
             Your <b>handle and identity</b> — the same DID, so nobody has to refollow you
@@ -130,34 +131,39 @@ export default function SetupForm({
       </div>
 
       <div className="card">
-        <h2>Sign in to {direction.from.label}</h2>
+        <h2>{copy.setup.signIn(direction.from.label)}</h2>
         <div className="field">
-          <label htmlFor="identifier">Handle or email on {direction.from.label}</label>
+          <label htmlFor="identifier">{copy.setup.identifier(direction.from.label)}</label>
           <input
             id="identifier"
             type="text"
             autoComplete="username"
+            aria-invalid={alreadyThere}
+            aria-describedby={alreadyThere ? 'identifier-error' : detecting ? 'identifier-status' : undefined}
             placeholder={`you${direction.from.availableUserDomains?.[0] ?? `.${direction.from.host}`}`}
             value={identifier}
             onChange={(e) => setIdentifier(e.target.value)}
             disabled={busy}
           />
-          {detecting && !detected && <p className="help">Looking up where your account lives…</p>}
+          {detecting && !detected && (
+            <p className="help" id="identifier-status" aria-live="polite">
+              {copy.setup.lookingUp}
+            </p>
+          )}
           {detected && !alreadyThere && (
             <p className="help">
-              Found on <b>{detected.label}</b>
-              {detected.label !== detected.host && ` (${detected.host})`}
-              {detected.didMethod === 'web' && ' — a did:web identity, so you publish the final change yourself'}
+              {copy.setup.foundOn(detected.label, detected.host, detected.label !== detected.host)}
+              {detected.didMethod === 'web' && copy.setup.didWebNote}
             </p>
           )}
           {alreadyThere && (
-            <p className="help" style={{ color: 'var(--warn)' }}>
-              This account already lives on {direction.to.label}. Use the swap button if you meant to move it away.
+            <p className="help" id="identifier-error" role="alert" style={{ color: 'var(--warn)' }}>
+              {copy.setup.alreadyThere(direction.to.label)}
             </p>
           )}
         </div>
         <div className="field">
-          <label htmlFor="password">Account password</label>
+          <label htmlFor="password">{copy.setup.password}</label>
           <input
             id="password"
             type="password"
@@ -166,19 +172,15 @@ export default function SetupForm({
             onChange={(e) => setPassword(e.target.value)}
             disabled={busy}
           />
-          <p className="help">
-            This has to be your real account password. App passwords are not allowed to move an account, so
-            {' '}{direction.from.label} will refuse one.
-          </p>
+          <p className="help">{copy.setup.passwordHelp(direction.from.label)}</p>
         </div>
 
         <div className="note" data-tone="accent">
-          Signing in only <strong>reads</strong> your account at this stage. You will see exactly what is about to move,
-          and can walk away, before anything changes.
+          {copy.setup.readOnly}
         </div>
 
         <details style={{ marginTop: 14 }} open={advanced} onToggle={(e) => setAdvanced(e.currentTarget.open)}>
-          <summary className="dim" style={{ cursor: 'pointer', fontSize: 13.5 }}>Advanced</summary>
+          <summary className="dim" style={{ cursor: 'pointer', fontSize: 13.5 }}>{copy.setup.advanced}</summary>
           <div style={{ marginTop: 12 }}>
             <label className="check">
               <input
@@ -188,29 +190,25 @@ export default function SetupForm({
                 disabled={busy}
               />
               <span>
-                Leave my {direction.from.label} account active
-                <span className="help">
-                  Normally the old account is deactivated once the move succeeds — its data is kept, it just stops
-                  serving. Only two servers claiming the same account at once causes confusion, so leave this off
-                  unless you know why you want it.
-                </span>
+                {copy.setup.keepActive(direction.from.label)}
+                <span className="help">{copy.setup.keepActiveHelp}</span>
               </span>
             </label>
           </div>
         </details>
 
         {error && (
-          <div className="note" data-tone="err" style={{ marginTop: 14 }}>
+          <div className="note" data-tone="err" role="alert" style={{ marginTop: 14 }}>
             {error}
           </div>
         )}
 
         <div className="actions">
           <button type="submit" className="primary" disabled={!ready || busy}>
-            {busy ? 'Checking…' : 'Check my account'}
+            {busy ? copy.setup.submitting : copy.setup.submit}
           </button>
           <span className="faint" style={{ fontSize: 13 }}>
-            Nothing moves yet.
+            {copy.setup.nothingMoves}
           </span>
         </div>
       </div>
