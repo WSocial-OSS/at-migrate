@@ -50,9 +50,11 @@ export async function POST(req: Request) {
   }
 
   const run = createRun(input)
-  // Fire and forget: progress is observed over the SSE stream, and a failure is
-  // recorded on the run itself rather than thrown at this request.
-  void run.run().catch(() => {})
+  // Progress is observed over SSE. The engine records failures on the run;
+  // this catch only prevents an unhandled-rejection crash.
+  void run.run().catch((err) => {
+    console.error(`[run ${run.id}]`, err)
+  })
 
   return NextResponse.json({ id: run.id, run: run.snapshot() }, { status: 201 })
 }
