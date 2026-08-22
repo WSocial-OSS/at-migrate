@@ -20,6 +20,8 @@ const KNOWN_NAMES: Record<string, string> = {
   'pds.witchcraft.systems': 'Witchcraft Systems',
   'selfhosted.social': 'Selfhosted.social',
   'zio.blue': 'Zio',
+  'at.app.wafrn.net': 'Wafrn',
+  'gems.xyz': 'Gems',
 }
 
 /**

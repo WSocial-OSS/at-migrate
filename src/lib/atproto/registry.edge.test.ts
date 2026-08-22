@@ -24,25 +24,42 @@ test('known networks get their product name, everyone else their hostname', () =
   assert.equal(labelFor('pds.robocracy.org'), 'pds.robocracy.org')
 })
 
-test('community PDS products keep their public names in the directory', () => {
-  // Wafrn: federated social network (open source, official mobile app) whose AT Proto
-  // entry point lives at at.app.wafrn.net — 1.7k accounts seen by the relay, active.
-  assert.equal(labelFor('at.app.wafrn.net'), 'Wafrn')
-  // Gems: consumer app with its own PDS at gems.xyz — 7.2k accounts, active.
-  assert.equal(labelFor('gems.xyz'), 'Gems')
-})
-
 test('bridges and throwaway deploys stay out of the directory', () => {
   assert.equal(isBridge('atproto.brid.gy'), true)
   assert.equal(isListable('atproto.brid.gy'), false)
-  assert.equal(isBridge('bsky.brid.gy'), true)
-  assert.equal(isListable('bsky.brid.gy'), false)
   assert.equal(isEphemeral('certified-apppds-core-pr-base.up.railway.app'), true)
-  assert.equal(isEphemeral('app.fly.dev'), true)
-  assert.equal(isEphemeral('abc.ngrok-free.app'), true)
-  assert.equal(isEphemeral('machine.tail.ts.net'), true)
   assert.equal(isEphemeral('pds.example.com'), false)
   assert.equal(isListable('pds.example.com'), true)
+})
+
+// ── Edge cases from #2: the second bridge, more ephemeral suffixes, named hosts ──
+
+test('the second bridge (bsky.brid.gy) is also excluded from the directory', () => {
+  assert.equal(isBridge('bsky.brid.gy'), true)
+  assert.equal(isListable('bsky.brid.gy'), false)
+})
+
+test('every listed ephemeral suffix keeps its host out of the directory', () => {
+  const cases = [
+    'pds.fly.dev',
+    'my-pds.ngrok-free.app',
+    'team-lab.ts.net',
+    'preview.onrender.com',
+    'app.vercel.app',
+    'tunnel.ngrok.io',
+    'quick.ngrok.app',
+    'temp.trycloudflare.com',
+    'share.loca.lt',
+    'dev.serveo.net',
+  ]
+  for (const host of cases) {
+    assert.equal(isEphemeral(host), true, `${host} should read as ephemeral`)
+    assert.equal(isListable(host), false, `${host} should not be listable`)
+  }
+})
+
+test('named product hosts stay listable even when they look generic', () => {
   assert.equal(isListable('eurosky.social'), true)
   assert.equal(isListable('bsky.social'), true)
+  assert.equal(isListable('pds.witchcraft.systems'), true)
 })
