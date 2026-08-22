@@ -2,7 +2,17 @@
   "name": "wsocial-migrate",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
+  "type": "module",
   "description": "Account migration wizard for moving atproto accounts between PDS hosts (Bluesky, EuroSky, WSocial) in either direction.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/WSocial-OSS/at-migrate.git"
+  },
+  "bugs": {
+    "url": "https://github.com/WSocial-OSS/at-migrate/issues"
+  },
+  "homepage": "https://github.com/WSocial-OSS/at-migrate#readme",
   "scripts": {
     "dev": "next dev -p 3210",
     "build": "next build",
