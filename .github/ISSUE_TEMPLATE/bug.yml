@@ -1,0 +1,70 @@
+name: Bug report
+description: Something is broken or behaves unexpectedly
+title: '[bug] '
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. English is the working language of this repository; reports in other languages are welcome.
+
+        **Do not paste account passwords, app passwords, PLC tokens, or emails.**
+        Security issues belong in [private vulnerability reporting](https://github.com/WSocial-OSS/at-migrate/security/advisories/new), not here.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did you see, and what did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: A local `npm run dev` path is ideal. Hostnames only — no credentials.
+      placeholder: |
+        1. Open http://localhost:3210
+        2. …
+    validations:
+      required: true
+  - type: dropdown
+    id: direction
+    attributes:
+      label: Migration direction (if relevant)
+      options:
+        - Bluesky to another PDS
+        - Another PDS to Bluesky
+        - W to another PDS
+        - Another PDS to W
+        - Other / not a migration run
+        - I don't know
+  - type: input
+    id: source-host
+    attributes:
+      label: Source PDS hostname
+      description: Hostname only, for example `bsky.social`. Leave blank if this is not a migration run.
+      placeholder: bsky.social
+  - type: input
+    id: dest-host
+    attributes:
+      label: Destination PDS hostname
+      description: Hostname only. Leave blank if this is not a migration run.
+      placeholder: pds.wsocial.network
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshot
+      description: Redact handles if you prefer. Never paste passwords, invite codes, or PLC emails.
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: Version / commit
+      description: Output of `git rev-parse --short HEAD`, or the deploy SHA.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: This is not a security vulnerability (those go through GitHub private reporting)
+          required: true

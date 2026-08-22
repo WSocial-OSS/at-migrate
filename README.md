@@ -1,13 +1,44 @@
-# Move your account
+# at-migrate
 
-A migration wizard for atproto accounts. It moves a Bluesky, EuroSky, WSocial or
-any other PDS account to a different PDS — and back — keeping the same DID,
-handle, posts, media, follows and followers.
+[![CI](https://github.com/WSocial-OSS/at-migrate/actions/workflows/ci.yml/badge.svg)](https://github.com/WSocial-OSS/at-migrate/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-05857c.svg)](LICENSE)
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-1df2ba.svg)](CODE_OF_CONDUCT.md)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D22-05857c.svg)](package.json)
+
+Move an atproto account from any PDS to any other PDS — same DID, handle, posts, media, follows and followers.
+
+**Tier 1 — supported.** This is the exit tool, shipped first, because "you can leave" has to be true.
+
+Part of [W Social](https://github.com/WSocial-OSS).
+
+## Quick start
+
+Requires [Node.js 22+](https://nodejs.org/). No W account, invite, passport, or production credentials.
+
+```bash
+git clone https://github.com/WSocial-OSS/at-migrate.git
+cd at-migrate
+cp .env.example .env.local
+npm install
+npm run dev
+```
+
+Open http://localhost:3210. Copying `.env.example` is enough for local development.
+
+Or open the repo in the [Dev Container](.devcontainer/devcontainer.json) (VS Code / GitHub Codespaces). Port 3210 is forwarded.
+
+```bash
+npm test            # unit tests
+npm run typecheck
+npm run build
+```
+
+## How it works
 
 Standalone Next.js app for now, built so the moving parts can be lifted into the
 WSocial signup flow later (see [Merging into WSocial](#merging-into-wsocial)).
 
-## Why "and back" is free
+### Why "and back" is free
 
 Migration is symmetric. A run is a source host, a destination host, and one
 account; reversing it means swapping the two hosts. There is no separate
@@ -15,7 +46,7 @@ account; reversing it means swapping the two hosts. There is no separate
 *is* the return trip, and the receipt a completed run produces records the
 reverse direction so the wizard can be seeded from it.
 
-## Every atproto network fits
+### Every atproto network fits
 
 There is no hardcoded list of networks. Two mechanisms cover the whole protocol:
 
@@ -53,10 +84,25 @@ the question, so `/api/hosts` has three modes: featured hosts probed on load,
 one server someone actually picked. Whatever the picker says, the engine
 re-checks the destination with `describeServer` at preflight.
 
-## What it actually does
+### What it actually does
 
 The standard atproto account migration, in the order that keeps the account
 recoverable for as long as possible:
+
+```mermaid
+flowchart TD
+  subgraph reversible ["Still reversible"]
+    P["1. preflight — check the account"]
+    C["2. create-account — claim the DID on the destination"]
+    R["3. transfer-repo"]
+    B["4. transfer-blobs"]
+    Pref["5. transfer-preferences"]
+    P --> C --> R --> B --> Pref
+  end
+  Pref --> I["6. identity — PLC / did:web handover"]
+  I --> G["7. go-live"]
+  G --> V["8. verify"]
+```
 
 | Step | Calls |
 | --- | --- |
@@ -98,23 +144,14 @@ cp .env.example .env.local
 | --- | --- |
 | `WSOCIAL_PDS_HOST` | `pds.wsocial.network` — the W PDS, confirmed against the live network (a W account, `anna.wsocial.eu`, resolves there). It serves `.wsocial.eu` handles and is **invite-only**, so the wizard asks arrivals for an invite code. Not `wsocial.news`, which is the marketing site; `api.wsocial.eu` and `bsky.wsocial.eu` are aliases of the same server, and `pds.wsocial.eu` currently 503s. |
 | `EUROSKY_PDS_HOST` | Optional override. Defaults to `eurosky.social`, verified as a live PDS (`did:web:eurosky.social`). |
-| `EXTRA_PDS_HOSTS` | Optional, `Label|hostname` comma separated. Pins extra hosts ahead of the live directory. |
+| `EXTRA_PDS_HOSTS` | Optional, `Label\|hostname` comma separated. Pins extra hosts ahead of the live directory. |
 | `ATPROTO_RELAY_HOST` | Optional. Relay used for the host directory; defaults to `relay1.us-west.bsky.network`. |
 
 Every host the wizard is actually asked to use is probed with
 `com.atproto.server.describeServer` first, so a stale or wrong hostname degrades
 to "not answering" instead of a broken run.
 
-## Running it
-
-```bash
-npm install && npm run dev
-```
-
-Then open http://localhost:3210. `npm test` runs the unit tests, `npm run
-typecheck` and `npm run build` the rest.
-
-### Deployment constraint
+## Deployment constraint
 
 Runs live in process memory (`src/lib/migration/store.ts`) and nowhere else,
 because a run in flight holds the user's real account password. That rules out
@@ -132,9 +169,9 @@ Railway's injected `PORT`), and healthchecks `/api/health`. That endpoint report
 whether `WSOCIAL_PDS_HOST` is set, because a deploy can be green and still be a
 broken environment if it is missing.
 
-`numReplicas` is pinned to **1** on purpose. See the deployment constraint below:
-runs live in the process that started them, so a second replica would answer a
-blocker request for a run it has never heard of.
+`numReplicas` is pinned to **1** on purpose. See the deployment constraint
+above: runs live in the process that started them, so a second replica would
+answer a blocker request for a run it has never heard of.
 
 Set per-environment variables on the service (`WSOCIAL_PDS_HOST` at minimum),
 then `railway up` — or connect the GitHub repo for push-to-deploy.
@@ -215,3 +252,22 @@ elsewhere?" as a branch on the signup screen, which skips the direction picker
   with you; a handle on a domain you own does.
 - The destination PDS must allow account creation with an existing DID via a
   service-auth token, which is the standard path but can be disabled.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). Tight first tasks live in
+[docs/good-first-issues.md](docs/good-first-issues.md).
+
+English is the working language. Issues and pull requests in other languages are
+welcome. Commits must be signed off (`git commit -s`) under the Developer
+Certificate of Origin — there is no CLA.
+
+## License
+
+[MIT](LICENSE)
+
+## Security
+
+Please report vulnerabilities through
+[GitHub private vulnerability reporting](https://github.com/WSocial-OSS/at-migrate/security/advisories/new)
+only. See [SECURITY.md](SECURITY.md).
