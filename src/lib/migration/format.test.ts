@@ -19,3 +19,8 @@ test('formatBytes rejects non-finite and negative counts', () => {
   assert.throws(() => formatBytes(Number.NaN), RangeError)
   assert.throws(() => formatBytes(Number.POSITIVE_INFINITY), RangeError)
 })
+
+test('formatBytes beyond the terabyte tier keeps scaling in TB', () => {
+  assert.equal(formatBytes(1.5 * 1024 ** 4), '1.5 TB')
+  assert.equal(formatBytes(3 * 1024 ** 4), '3.0 TB')
+})
