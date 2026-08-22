@@ -145,7 +145,8 @@ cp .env.example .env.local
 | `WSOCIAL_PDS_HOST` | `pds.wsocial.network` — the W PDS, confirmed against the live network (a W account, `anna.wsocial.eu`, resolves there). It serves `.wsocial.eu` handles and is **invite-only**, so the wizard asks arrivals for an invite code. Not `wsocial.news`, which is the marketing site; `api.wsocial.eu` and `bsky.wsocial.eu` are aliases of the same server, and `pds.wsocial.eu` currently 503s. |
 | `EUROSKY_PDS_HOST` | Optional override. Defaults to `eurosky.social`, verified as a live PDS (`did:web:eurosky.social`). |
 | `EXTRA_PDS_HOSTS` | Optional, `Label\|hostname` comma separated. Pins extra hosts ahead of the live directory. |
-| `ATPROTO_RELAY_HOST` | Optional. Relay used for the host directory; defaults to `relay1.us-west.bsky.network`. |
+| `ATPROTO_RELAY_HOST` | Optional. Primary relay for the host directory; defaults to `relay1.us-west.bsky.network`. |
+| `ATPROTO_RELAY_FALLBACK` | Optional. Used only when the primary relay fails and there is no cached directory; defaults to `relay1.us-east.bsky.network`. |
 
 Every host the wizard is actually asked to use is probed with
 `com.atproto.server.describeServer` first, so a stale or wrong hostname degrades

@@ -9,7 +9,8 @@ import { isBlueskyShard, isListable, labelFor } from './registry'
  * after it was written. Roughly 1,800 independent servers show up here.
  */
 
-const RELAY = process.env.ATPROTO_RELAY_HOST?.trim() || 'relay1.us-west.bsky.network'
+export const DEFAULT_RELAY = 'relay1.us-west.bsky.network'
+export const FALLBACK_RELAY = 'relay1.us-east.bsky.network'
 const PAGE = 1000
 const MAX_PAGES = 20
 const TTL_MS = 30 * 60 * 1000
@@ -25,26 +26,54 @@ export type DirectoryEntry = {
   named: boolean
 }
 
-type RelayHost = { hostname: string; accountCount?: number; status?: string }
+export type RelayHost = { hostname: string; accountCount?: number; status?: string }
+
+export type FetchLike = (input: string | URL, init?: RequestInit) => Promise<Response>
 
 let cache: { at: number; entries: DirectoryEntry[]; blueskyAccounts: number } | null = null
 let inFlight: Promise<void> | null = null
+let fetchImpl: FetchLike = fetch
 
-async function fetchAll(): Promise<void> {
+export function setDirectoryFetch(fn: FetchLike) {
+  fetchImpl = fn
+}
+
+export function resetDirectoryCache() {
+  cache = null
+  inFlight = null
+}
+
+export function primaryRelay(): string {
+  return process.env.ATPROTO_RELAY_HOST?.trim() || DEFAULT_RELAY
+}
+
+export function fallbackRelay(): string {
+  return process.env.ATPROTO_RELAY_FALLBACK?.trim() || FALLBACK_RELAY
+}
+
+/** Page through `com.atproto.sync.listHosts` on one relay. */
+export async function listHostsFromRelay(relay: string, fetchFn: FetchLike = fetchImpl): Promise<RelayHost[]> {
   const hosts: RelayHost[] = []
   let cursor: string | undefined
   for (let page = 0; page < MAX_PAGES; page++) {
-    const url = new URL(`https://${RELAY}/xrpc/com.atproto.sync.listHosts`)
+    const url = new URL(`https://${relay}/xrpc/com.atproto.sync.listHosts`)
     url.searchParams.set('limit', String(PAGE))
     if (cursor) url.searchParams.set('cursor', cursor)
-    const res = await fetch(url, { signal: AbortSignal.timeout(20_000) })
-    if (!res.ok) throw new Error(`relay ${RELAY} returned ${res.status}`)
+    const res = await fetchFn(url, { signal: AbortSignal.timeout(20_000) })
+    if (!res.ok) throw new Error(`relay ${relay} returned ${res.status}`)
     const data = (await res.json()) as { hosts?: RelayHost[]; cursor?: string }
     hosts.push(...(data.hosts ?? []))
     cursor = data.cursor
     if (!cursor) break
   }
+  return hosts
+}
 
+/**
+ * Turn a raw relay census into the picker directory: drop bridges, shards and
+ * throwaways; credit Bluesky's shards back to `bsky.social`; sort by size.
+ */
+export function assembleDirectory(hosts: RelayHost[]): { entries: DirectoryEntry[]; blueskyAccounts: number } {
   const active = hosts.filter((h) => h.status === 'active')
   const seen = new Set<string>()
   const entries: DirectoryEntry[] = []
@@ -60,10 +89,6 @@ async function fetchAll(): Promise<void> {
     })
   }
 
-  // Bluesky never appears in the relay's list under its own name — only its
-  // internal shards do, and those are filtered out above. Without this the
-  // largest network on atproto would be missing from the directory entirely,
-  // so stand it in explicitly with its shards' accounts credited to it.
   const blueskyAccounts = active
     .filter((h) => isBlueskyShard(h.hostname))
     .reduce((sum, h) => sum + (h.accountCount ?? 0), 0)
@@ -78,7 +103,18 @@ async function fetchAll(): Promise<void> {
   }
 
   entries.sort((a, b) => b.accountCount - a.accountCount)
-  cache = { at: Date.now(), entries, blueskyAccounts }
+  return { entries, blueskyAccounts }
+}
+
+async function fetchAll(): Promise<void> {
+  const primary = primaryRelay()
+  const fallback = fallbackRelay()
+  const hosts = await listHostsFromRelay(primary).catch((err: unknown) => {
+    if (primary === fallback) throw err
+    return listHostsFromRelay(fallback)
+  })
+  const assembled = assembleDirectory(hosts)
+  cache = { at: Date.now(), ...assembled }
 }
 
 /** Cached directory. Refreshes on a TTL; a failed refresh keeps serving stale data. */
